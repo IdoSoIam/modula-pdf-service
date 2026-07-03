@@ -93,6 +93,7 @@ final class PdfRenderer
         $totals = is_array($payload['totals'] ?? null) ? $payload['totals'] : [];
         $items = is_array($payload['items'] ?? null) ? $payload['items'] : [];
         $columns = is_array($payload['columns'] ?? null) ? $payload['columns'] : [];
+        $metaLines = is_array($payload['metaLines'] ?? null) ? $payload['metaLines'] : [];
         $logoDataUri = trim((string) ($payload['logoDataUri'] ?? ''));
         $notes = trim((string) ($payload['notes'] ?? ''));
         $taxRows = is_array($totals['taxRows'] ?? null) ? $totals['taxRows'] : [];
@@ -195,23 +196,25 @@ final class PdfRenderer
   .page { font-size: 10pt; line-height: 1.45; padding-bottom: 22mm; }
   .page-body { padding-bottom: 34px; }
   .topbar { height: 4px; background: #4b56d2; margin-bottom: 14px; }
-  .header-table { width: 100%; border-collapse: collapse; }
-  .brand-block { width: 58%; vertical-align: top; }
-  .meta-block { width: 42%; vertical-align: top; text-align: right; }
+  .header-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .brand-block { width: 61%; vertical-align: top; }
+  .meta-block { width: 39%; vertical-align: top; text-align: right; }
   .brand-row { width: 100%; border-collapse: collapse; }
-  .logo-cell { width: 128px; vertical-align: top; }
+  .logo-cell { width: 112px; vertical-align: top; }
   .copy-cell { vertical-align: top; }
-  .logo { width: 124px; }
-  .brand-name { font-size: 24pt; font-weight: bold; line-height: 1.05; margin: 0; }
-  .document-title { color: #627086; font-size: 11pt; margin-top: 6px; }
-  .meta-title { color: #4b56d2; font-size: 12pt; font-weight: bold; margin: 0 0 4px; }
-  .meta-line { color: #627086; font-size: 9pt; margin: 0 0 2px; }
-  .status-chip { display: inline-block; margin-top: 8px; padding: 4px 8px; background: #eef2ff; color: #4b56d2; font-size: 8pt; font-weight: bold; }
-  .party-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 12px; }
-  .party-card { width: 48%; vertical-align: top; border: 1px solid #d9deea; background: #f7f9fc; padding: 12px 14px; }
-  .party-gap { width: 4%; }
-  .party-title { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.08em; color: #627086; font-weight: bold; margin-bottom: 8px; }
-  .party-line { margin: 0 0 3px; }
+  .logo { width: 104px; }
+  .brand-name { font-size: 18pt; font-weight: bold; line-height: 1.04; letter-spacing: -0.01em; white-space: nowrap; margin: 0; }
+  .document-title { color: #627086; font-size: 9.5pt; margin-top: 5px; white-space: nowrap; }
+  .meta-title { color: #4b56d2; font-size: 12pt; font-weight: bold; margin: 0 0 4px; line-height: 1.1; white-space: nowrap; }
+  .meta-line { color: #627086; font-size: 9pt; margin: 0 0 2px; white-space: nowrap; }
+  .status-chip { display: block; width: 100%; margin-top: 8px; padding: 4px 8px; background: #eef2ff; color: #4b56d2; font-size: 8pt; font-weight: bold; text-align: right; white-space: nowrap; }
+  .party-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; margin-top: 12px; }
+  .party-card { width: 49.5%; vertical-align: top; border: 1px solid #d9deea; background: #f7f9fc; padding: 12px 14px; }
+  .party-gap { width: 1%; }
+  .party-title { font-size: 7.6pt; text-transform: uppercase; letter-spacing: 0.04em; color: #627086; font-weight: bold; margin-bottom: 8px; white-space: nowrap; }
+  .party-line { margin: 0 0 3px; font-size: 9pt; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
+  .meta-box { border: 1px solid #d9deea; background: #f7f9fc; margin-top: 12px; padding: 12px 14px; }
+  .meta-box-line { margin: 0 0 4px; color: #627086; }
   .invoice-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 12px; border: 1px solid #d9deea; }
   .invoice-table th { background: #f7f9fc; color: #627086; font-size: 7.2pt; font-weight: bold; padding: 7px 4px; border-bottom: 1px solid #d9deea; text-align: right; white-space: normal; word-break: break-word; line-height: 1.2; }
   .invoice-table .cell { padding: 7px 4px; border-bottom: 1px solid #d9deea; vertical-align: top; white-space: normal; word-break: break-word; line-height: 1.2; font-size: 9pt; }
@@ -275,6 +278,8 @@ final class PdfRenderer
       </td>
     </tr>
   </table>
+
+  ' . (!empty($metaLines) ? '<div class="meta-box">' . $this->renderParagraphLines(array_map(static fn ($line): string => (string) $line, $metaLines), 'meta-box-line') . '</div>' : '') . '
 
   <table class="invoice-table" border="0" cellspacing="0" cellpadding="0">
     <thead>
@@ -395,21 +400,23 @@ final class PdfRenderer
   * { font-family: ' . $this->escape($fontFamily) . '; color: #18212f; box-sizing: border-box; }
   .page { font-size: 10pt; line-height: 1.45; padding-bottom: 22mm; }
   .topbar { height: 4px; background: #4b56d2; margin-bottom: 14px; }
-  .header-table { width: 100%; border-collapse: collapse; }
-  .brand-block { width: 58%; vertical-align: top; }
-  .meta-block { width: 42%; vertical-align: top; text-align: right; }
+  .header-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .brand-block { width: 61%; vertical-align: top; }
+  .meta-block { width: 39%; vertical-align: top; text-align: right; }
   .brand-row { width: 100%; border-collapse: collapse; }
-  .logo-cell { width: 128px; vertical-align: top; }
+  .logo-cell { width: 112px; vertical-align: top; }
   .copy-cell { vertical-align: top; }
-  .logo { max-width: 116px; max-height: 78px; object-fit: contain; object-position: left top; }
-  .brand-name { font-size: 24pt; font-weight: bold; line-height: 1.05; margin: 0; }
-  .document-title { color: #627086; font-size: 11pt; margin-top: 6px; }
+  .logo { width: 104px; max-width: 104px; max-height: 76px; object-fit: contain; object-position: left top; }
+  .brand-name { font-size: 18pt; font-weight: bold; line-height: 1.04; margin: 0; white-space: nowrap; }
+  .document-title { color: #627086; font-size: 9.5pt; margin-top: 5px; white-space: nowrap; }
   .meta-title { color: #4b56d2; font-size: 12pt; font-weight: bold; margin: 0 0 4px; }
   .meta-line { color: #627086; font-size: 9pt; margin: 0 0 2px; }
-  .status-chip { display: inline-block; margin-top: 8px; padding: 4px 8px; background: #eef2ff; color: #4b56d2; font-size: 8pt; font-weight: bold; }
-  .party-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 12px; }
-  .party-card { width: 48%; vertical-align: top; border: 1px solid #d9deea; background: #f7f9fc; padding: 12px 14px; }
-  .party-gap { width: 4%; }
+  .status-chip { display: block; width: 100%; margin-top: 8px; padding: 4px 8px; background: #eef2ff; color: #4b56d2; font-size: 8pt; font-weight: bold; text-align: right; white-space: nowrap; }
+  .party-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; margin-top: 12px; }
+  .party-card { width: 49.5%; vertical-align: top; border: 1px solid #d9deea; background: #f7f9fc; padding: 12px 14px; }
+  .party-gap { width: 1%; }
+  .party-title { font-size: 7.6pt; text-transform: uppercase; letter-spacing: 0.04em; color: #627086; font-weight: bold; margin-bottom: 8px; white-space: nowrap; }
+  .party-line { margin: 0 0 3px; font-size: 9pt; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
 </style>
 <div class="page">
   <div class="topbar"></div>
