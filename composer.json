@@ -1,0 +1,13 @@
+{
+    "name": "idosoiam/modula-pdf-service",
+    "description": "Service PDF local de test pour Modula CMS base sur tc-lib-pdf.",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "ModulaPdfService\\": "src/"
+        }
+    },
+    "require": {
+        "tecnickcom/tc-lib-pdf": "^8.65"
+    }
+}

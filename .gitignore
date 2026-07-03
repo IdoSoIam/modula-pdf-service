@@ -1,0 +1,6 @@
+/vendor
+/storage/test-render.pdf
+/storage/test-render-detailed.pdf
+/storage/php-server.log
+/storage/php-server-error.log
+/.env
