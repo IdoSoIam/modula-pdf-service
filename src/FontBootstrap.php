@@ -43,9 +43,7 @@ final class FontBootstrap
             return $family;
         }
 
-        throw new \RuntimeException(
-            'Aucune police utilisable n a ete trouvee. Fournissez les fichiers convertis dans storage/fonts/custom ou des polices TTF sur le serveur.'
-        );
+        return 'helvetica';
     }
 
     private static function detectExistingFamily(string $customFontsDir): ?string
