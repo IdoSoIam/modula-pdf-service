@@ -107,6 +107,7 @@ final class PdfRenderer
         $totalVatLabel = trim((string) ($labels['totalVat'] ?? '')) ?: 'Total VAT';
         $totalTtcLabel = trim((string) ($labels['totalTtc'] ?? '')) ?: 'Total incl. VAT';
         $emptyLinesLabel = trim((string) ($labels['emptyLines'] ?? '')) ?: 'No lines';
+        $vatNote = trim((string) ($payload['vatNote'] ?? ''));
 
         $sellerLines = array_values(array_filter([
             $seller['name'] ?? null,
@@ -190,6 +191,10 @@ final class PdfRenderer
             $taxRowsHtml .= '<tr><td class="total-label">' . $this->escape((string) ($taxRow['label'] ?? 'TVA')) . '</td><td class="total-value">' . $this->escape((string) ($taxRow['amountLabel'] ?? '')) . '</td></tr>';
         }
 
+        $totalVatRowHtml = $vatNote === ''
+            ? '<tr><td class="total-label">' . $this->escape($totalVatLabel) . '</td><td class="total-value">' . $this->escape((string) ($totals['totalVatLabel'] ?? '')) . '</td></tr>'
+            : '';
+
         return '
 <style>
   * { font-family: ' . $this->escape($fontFamily) . '; color: #18212f; box-sizing: border-box; }
@@ -197,26 +202,26 @@ final class PdfRenderer
   .page-body { padding-bottom: 34px; }
   .topbar { height: 4px; background: #4b56d2; margin-bottom: 14px; }
   .header-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  .brand-block { width: 61%; vertical-align: top; }
-  .meta-block { width: 39%; vertical-align: top; text-align: right; }
+  .brand-block { width: 70%; vertical-align: top; }
+  .meta-block { width: 30%; vertical-align: top; text-align: right; }
   .brand-row { width: 100%; border-collapse: collapse; }
-  .logo-cell { width: 112px; vertical-align: top; }
-  .copy-cell { vertical-align: top; }
-  .logo { width: 104px; }
-  .brand-name { font-size: 18pt; font-weight: bold; line-height: 1.04; letter-spacing: -0.01em; white-space: nowrap; margin: 0; }
-  .document-title { color: #627086; font-size: 9.5pt; margin-top: 5px; white-space: nowrap; }
-  .meta-title { color: #4b56d2; font-size: 12pt; font-weight: bold; margin: 0 0 4px; line-height: 1.1; white-space: nowrap; }
+  .logo-cell { width: 108px; vertical-align: top; }
+  .copy-cell { vertical-align: top; padding-left: 6px; }
+  .logo { width: 96px; }
+  .brand-name { font-size: 14pt; font-weight: normal; line-height: 1.04; letter-spacing: -0.01em; white-space: nowrap; margin: 0; }
+  .document-title { color: #627086; font-size: 8.6pt; margin-top: 4px; white-space: nowrap; }
+  .meta-title { color: #4b56d2; font-size: 10pt; font-weight: normal; margin: 0 0 4px; line-height: 1.1; white-space: nowrap; }
   .meta-line { color: #627086; font-size: 9pt; margin: 0 0 2px; white-space: nowrap; }
-  .status-chip { display: block; width: 100%; margin-top: 8px; padding: 4px 8px; background: #eef2ff; color: #4b56d2; font-size: 8pt; font-weight: bold; text-align: right; white-space: nowrap; }
+  .status-chip { display: block; width: 100%; margin-top: 8px; padding: 4px 8px; background: #eef2ff; color: #4b56d2; font-size: 8pt; font-weight: normal; text-align: right; white-space: nowrap; }
   .party-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; margin-top: 12px; }
   .party-card { width: 49.5%; vertical-align: top; border: 1px solid #d9deea; background: #f7f9fc; padding: 12px 14px; }
   .party-gap { width: 1%; }
-  .party-title { font-size: 7.6pt; text-transform: uppercase; letter-spacing: 0.04em; color: #627086; font-weight: bold; margin-bottom: 8px; white-space: nowrap; }
+  .party-title { font-size: 7.6pt; text-transform: uppercase; letter-spacing: 0.04em; color: #627086; font-weight: normal; margin-bottom: 8px; white-space: nowrap; }
   .party-line { margin: 0 0 3px; font-size: 9pt; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
   .meta-box { border: 1px solid #d9deea; background: #f7f9fc; margin-top: 12px; padding: 12px 14px; }
   .meta-box-line { margin: 0 0 4px; color: #627086; }
   .invoice-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 12px; border: 1px solid #d9deea; }
-  .invoice-table th { background: #f7f9fc; color: #627086; font-size: 7.2pt; font-weight: bold; padding: 7px 4px; border-bottom: 1px solid #d9deea; text-align: right; white-space: normal; word-break: break-word; line-height: 1.2; }
+  .invoice-table th { background: #f7f9fc; color: #627086; font-size: 7.2pt; font-weight: normal; padding: 7px 4px; border-bottom: 1px solid #d9deea; text-align: right; white-space: normal; word-break: break-word; line-height: 1.2; }
   .invoice-table .cell { padding: 7px 4px; border-bottom: 1px solid #d9deea; vertical-align: top; white-space: normal; word-break: break-word; line-height: 1.2; font-size: 9pt; }
   .invoice-table tr:last-child .cell { border-bottom: none; }
   .center { text-align: center; }
@@ -225,21 +230,23 @@ final class PdfRenderer
   .col-lineNumber { text-align: center !important; padding-left: 1px !important; padding-right: 1px !important; }
   .col-designation { text-align: left !important; }
   .col-vatRate { color: #627086; font-size: 8.1pt; line-height: 1.15; }
-  .line-title { font-size: 9.4pt; font-weight: bold; }
+  .line-title { font-size: 9.4pt; font-weight: normal; }
   .line-description { font-size: 8.5pt; color: #627086; margin-top: 4px; }
-  .total-cell { font-weight: bold; }
+  .total-cell { font-weight: normal; }
+  .invoice-vat-note { margin: 6px 0 12px; text-align: right; font-size: 8.2pt; color: #627086; }
   .summary-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
   .notes-cell { width: 55%; vertical-align: top; }
-  .notes-title { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.08em; color: #627086; font-weight: bold; margin-bottom: 8px; }
+  .notes-title { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.08em; color: #627086; font-weight: normal; margin-bottom: 8px; }
   .totals-cell { width: 40%; vertical-align: top; }
   .summary-gap { width: 5%; }
   .totals-box { width: 100%; border: 1px solid #d9deea; background: #fff; }
+  .totals-heading { padding: 10px 12px; background: #f7f9fc; border-bottom: 1px solid #d9deea; color: #18212f; font-size: 9px; font-weight: normal; }
   .totals-inner { width: 100%; border-collapse: collapse; }
   .totals-inner td { padding: 7px 12px; border-bottom: 1px solid #d9deea; }
   .totals-inner tr:last-child td { border-bottom: none; }
   .total-label { color: #18212f; }
-  .total-value { text-align: right; font-weight: bold; }
-  .grand-total td { color: #4b56d2; font-size: 11pt; font-weight: bold; }
+  .total-value { text-align: right; font-weight: normal; }
+  .grand-total td { color: #4b56d2; font-size: 11pt; font-weight: normal; }
 </style>
 <div class="page">
   <div class="page-body">
@@ -287,6 +294,7 @@ final class PdfRenderer
     </thead>
     <tbody>' . $rows . '</tbody>
   </table>
+  ' . ($vatNote !== '' ? '<div class="invoice-vat-note">' . $this->escape($vatNote) . '</div>' : '') . '
 
   <table class="summary-table" border="0" cellspacing="0" cellpadding="0">
     <tr>
@@ -297,11 +305,11 @@ final class PdfRenderer
       <td class="summary-gap"></td>
       <td class="totals-cell">
         <div class="totals-box">
-          <div class="notes-title" style="padding:10px 12px 0;">' . $this->escape($totalsTitle) . '</div>
+          <div class="totals-heading">' . $this->escape($totalsTitle) . '</div>
           <table class="totals-inner" border="0" cellspacing="0" cellpadding="0">
             <tr><td class="total-label">' . $this->escape($totalHtLabel) . '</td><td class="total-value">' . $this->escape((string) ($totals['subtotalHtLabel'] ?? '')) . '</td></tr>
             ' . $taxRowsHtml . '
-            <tr><td class="total-label">' . $this->escape($totalVatLabel) . '</td><td class="total-value">' . $this->escape((string) ($totals['totalVatLabel'] ?? '')) . '</td></tr>
+            ' . $totalVatRowHtml . '
             <tr class="grand-total"><td>' . $this->escape($totalTtcLabel) . '</td><td class="total-value">' . $this->escape((string) ($totals['grandTotalLabel'] ?? '')) . '</td></tr>
           </table>
         </div>
