@@ -137,6 +137,7 @@ final class PdfRenderer
             ];
         }
 
+        $columnWidths = $this->resolveInvoiceColumnWidths($columns);
         $headerCells = '';
         foreach ($columns as $column) {
             if (!is_array($column)) {
@@ -144,7 +145,7 @@ final class PdfRenderer
             }
             $key = (string) ($column['key'] ?? '');
             $label = (string) ($column['label'] ?? $key);
-            $headerCells .= '<th class="' . $this->escapeAttribute($this->invoiceColumnClass($key, true)) . '" style="' . $this->escapeAttribute($this->invoiceColumnStyle($key, true)) . '">'
+            $headerCells .= '<th class="' . $this->escapeAttribute($this->invoiceColumnClass($key, true)) . '" style="' . $this->escapeAttribute($this->invoiceColumnStyle($key, true, $columnWidths)) . '">'
                 . $this->escape($label)
                 . '</th>';
         }
@@ -163,7 +164,7 @@ final class PdfRenderer
                 }
                 $key = (string) ($column['key'] ?? '');
                 if ($key === 'designation') {
-                    $rows .= '<td class="' . $this->escapeAttribute($this->invoiceColumnClass($key, false)) . '" style="' . $this->escapeAttribute($this->invoiceColumnStyle($key, false)) . '">'
+                    $rows .= '<td class="' . $this->escapeAttribute($this->invoiceColumnClass($key, false)) . '" style="' . $this->escapeAttribute($this->invoiceColumnStyle($key, false, $columnWidths)) . '">'
                         . '<div class="line-title">' . $this->escape((string) (($values[$key] ?? null) ?: ($item['name'] ?? ('Article ' . ($index + 1))))) . '</div>'
                         . (!empty($item['description']) ? '<div class="line-description">' . $this->escape((string) $item['description']) . '</div>' : '')
                         . '</td>';
@@ -171,7 +172,7 @@ final class PdfRenderer
                 }
 
                 $value = (string) (($values[$key] ?? null) ?: '-');
-                $rows .= '<td class="' . $this->escapeAttribute($this->invoiceColumnClass($key, false)) . '" style="' . $this->escapeAttribute($this->invoiceColumnStyle($key, false)) . '">'
+                $rows .= '<td class="' . $this->escapeAttribute($this->invoiceColumnClass($key, false)) . '" style="' . $this->escapeAttribute($this->invoiceColumnStyle($key, false, $columnWidths)) . '">'
                     . $this->escape($value)
                     . '</td>';
             }
@@ -329,23 +330,11 @@ final class PdfRenderer
         return trim($base . 'col-' . $key . ' ' . $align . $weight);
     }
 
-    private function invoiceColumnStyle(string $key, bool $header): string
+    private function invoiceColumnStyle(string $key, bool $header, array $columnWidths = []): string
     {
-        $widthMap = [
-            'lineNumber' => '4%',
-            'designation' => '27%',
-            'reference' => '7%',
-            'quantity' => '5%',
-            'unitPriceHt' => '11%',
-            'totalHt' => '11%',
-            'vatAmount' => '11%',
-            'vatRate' => '12%',
-            'totalTtc' => '12%',
-        ];
-
         $styles = [];
-        if (isset($widthMap[$key])) {
-            $styles[] = 'width:' . $widthMap[$key];
+        if (isset($columnWidths[$key])) {
+            $styles[] = 'width:' . $columnWidths[$key];
         }
 
         if ($key === 'designation') {
@@ -368,6 +357,44 @@ final class PdfRenderer
         }
 
         return implode(';', $styles);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $columns
+     * @return array<string, string>
+     */
+    private function resolveInvoiceColumnWidths(array $columns): array
+    {
+        $rawWidthMap = [
+            'lineNumber' => 4.0,
+            'designation' => 27.0,
+            'reference' => 7.0,
+            'quantity' => 5.0,
+            'unitPriceHt' => 11.0,
+            'totalHt' => 11.0,
+            'vatAmount' => 11.0,
+            'vatRate' => 12.0,
+            'totalTtc' => 12.0,
+        ];
+
+        $total = 0.0;
+        foreach ($columns as $column) {
+            $key = (string) ($column['key'] ?? '');
+            $total += $rawWidthMap[$key] ?? 10.0;
+        }
+
+        if ($total <= 0) {
+            $total = 1.0;
+        }
+
+        $widths = [];
+        foreach ($columns as $column) {
+            $key = (string) ($column['key'] ?? '');
+            $raw = $rawWidthMap[$key] ?? 10.0;
+            $widths[$key] = number_format(($raw / $total) * 100, 4, '.', '') . '%';
+        }
+
+        return $widths;
     }
 
     /**
